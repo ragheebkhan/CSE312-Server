@@ -1,37 +1,98 @@
 import json
+from typing import Dict
 
+mime_types = {
+    ".json" : "application/javascript",
+    ".html" : "text/html",
+    ".css" : "text/css",
+    ".gif" : "image/gif",
+    ".png" : "image/png",
+    ".jpg" : "image/jpeg",
+    ".jpeg" : "image/jpeg",
+    ".mp4" : "video/mp4",
+    ".js" : "text/javascript",
+    ".ico" : "image/x-icon",
+    ".webp" : "image/webp"
+}
 
 class Response:
     def __init__(self):
-        pass
+        self.status_code = 200
+        self.status_message = "OK"
+        self.headers_dict : Dict[str,str] = {}
+        self.cookies_dict : Dict[str,str] = {}
+        self.body = b""
 
-    def set_status(self, code, text):
-        pass
+    def set_status(self, code : int, text : str):
+        self.status_code = code
+        self.status_message = text
+        return self
 
-    def headers(self, headers):
-        pass
+    def headers(self, headers : Dict[str,str]):
+        self.headers_dict.update(headers)
+        return self
 
-    def cookies(self, cookies):
-        pass
+    def cookies(self, cookies : Dict[str,str]):
+        self.cookies_dict.update(cookies)
+        return self
 
-    def bytes(self, data):
-        pass
+    def bytes(self, data : bytes):
+        self.body = self.body + data
+        return self
 
-    def text(self, data):
-        pass
+    def text(self, data : str):
+        self.body = self.body + data.encode("utf-8")
+        return self
 
     def json(self, data):
-        pass
+        self.headers_dict["Content-Type"] = "application/json"
+        jsonstr = json.dumps(data)
+        self.body = jsonstr.encode("utf-8")
+        return self
 
     def to_data(self):
-        return b''
+        if "Content-Type" not in self.headers_dict:
+            self.headers_dict["Content-Type"] = "text/plain; charset=utf-8"
+        self.headers_dict["Content-Length"] = str(len(self.body))
+        self.headers_dict["X-Content-Type-Options"] = "nosniff"
 
+        head = b"HTTP/1.1" + b" " + str(self.status_code).encode('ascii') + b" " + self.status_message.encode('ascii') + b"\r\n"
+        
+        for key, value in self.headers_dict.items():
+            if key == "Content-Type" or key == "Content-Length":
+                continue
+            head += key.encode('ascii') + b": " + value.encode('ascii') + b"\r\n"
+        if self.cookies_dict:
+            head += b"Set-Cookie:"
+            for key, value in self.cookies_dict.items():
+                head += b" " + key.encode('ascii') + b"=" + value.encode('ascii')
+                if len(self.cookies_dict.items()) != 1:
+                    head += b";"
+            head += b"\r\n"
+        head += b"Content-Type: " + self.headers_dict["Content-Type"].encode('ascii') + b"\r\n"
+        head += b"Content-Length: " + self.headers_dict["Content-Length"].encode('ascii') + b"\r\n\r\n"
+
+        data = head + self.body
+
+        return data
+
+def send404(handler, message = "File Not Found"):
+    res = Response()
+    res.set_status(404, "Not Found")
+    res.text(message)
+    handler.request.sendall(res.to_data())
+
+def send403(handler):
+    res = Response()
+    res.set_status(403, "Forbidden")
+    res.text("You don't have permission to do that")
+    handler.request.sendall(res.to_data())
 
 def test1():
     res = Response()
     res.text("hello")
-    expected = b'HTTP/1.1 200 OK\r\nContent-Type: text/plain; charset=utf-8\r\nContent-Length: 5\r\n\r\nhello'
-    actual = res.to_data()
+    res.cookies({"session" : "abc123", "testkey" : "testval"})
+    print(res.to_data().decode())
 
 
 if __name__ == '__main__':
