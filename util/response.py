@@ -2,14 +2,14 @@ import json
 
 mime_types = {
     ".json" : "application/javascript",
-    ".html" : "text/html",
-    ".css" : "text/css",
+    ".html" : "text/html; charset=utf-8",
+    ".css" : "text/css; charset=utf-8",
     ".gif" : "image/gif",
     ".png" : "image/png",
     ".jpg" : "image/jpeg",
     ".jpeg" : "image/jpeg",
     ".mp4" : "video/mp4",
-    ".js" : "text/javascript",
+    ".js" : "text/javascript; charset=utf-8",
     ".ico" : "image/x-icon",
     ".webp" : "image/webp"
 }
@@ -46,7 +46,7 @@ class Response:
     def json(self, data):
         self.headers_dict["Content-Type"] = "application/json"
         jsonstr = json.dumps(data)
-        self.body = bytes(jsonstr)
+        self.body = jsonstr.encode()
         return self
 
     def to_data(self):
@@ -61,13 +61,10 @@ class Response:
             if key == "Content-Type" or key == "Content-Length":
                 continue
             head += key.encode('ascii') + b": " + value.encode('ascii') + b"\r\n"
-        if self.cookies_dict:
-            head += b"Set-Cookie:"
-            for key, value in self.cookies_dict.items():
-                head += b" " + key.encode('ascii') + b"=" + value.encode('ascii')
-                if len(self.cookies_dict.items()) != 1:
-                    head += b";"
-            head += b"\r\n"
+
+        for key, value in self.cookies_dict.items():
+            head += b"Set-Cookie: " + key.encode('ascii') + b"=" + value.encode('ascii') +b'\r\n'
+    
         head += b"Content-Type: " + self.headers_dict["Content-Type"].encode('ascii') + b"\r\n"
         head += b"Content-Length: " + self.headers_dict["Content-Length"].encode('ascii') + b"\r\n\r\n"
 
@@ -88,10 +85,16 @@ def send403(handler):
     handler.request.sendall(res.to_data())
 
 def test1():
+    expected = b'HTTP/1.1 403 Forbidden\r\nX-Content-Type-Options: nosniff\r\ntestkey1: testval1\r\ntestkey2: testval2\r\nContent-Type: text/plain; charset=utf-8\r\nContent-Length: 18\r\n\r\nhello1hello2hello3'
     res = Response()
-    res.text("hello")
-    res.cookies({"session" : "abc123", "testkey" : "testval"})
-    print(res.to_data().decode())
+    res.text("hello1").text("hello2").text("hello3")
+    res.set_status(403,"Forbidden")
+    res.headers({"testkey1" : "testval1", "testkey2":"testval2"})
+
+    actual = res.to_data()
+    print(f"EXPECTED: {expected}")
+    print(f"ACTUAL:   {actual}")
+    assert expected == actual
 
 
 if __name__ == '__main__':

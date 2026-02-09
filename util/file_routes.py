@@ -41,6 +41,7 @@ def get_file(request : util.request.Request, handler):
     res.headers({"Content-Type" : mime_type})
     res.bytes(file_bytes)
 
+    print(res.to_data())
     handler.request.sendall(res.to_data())
 
 def render_html(request : util.request.Request, handler):
@@ -67,6 +68,8 @@ def render_html(request : util.request.Request, handler):
 
     res.headers({"Content-Type" : util.response.mime_types[".html"]})
     res.bytes(layout_content.replace(b"{{content}}", file_content))
+
+    print(res.to_data())
 
     handler.request.sendall(res.to_data())
 
