@@ -23,7 +23,7 @@ class Response:
         self.cookies_dict = {}
         self.body = b""
 
-    def set_status(self, code : int, text : str):
+    def set_status(self, code, text):
         self.status_code = code
         self.status_message = text
         return self
@@ -36,11 +36,11 @@ class Response:
         self.cookies_dict.update(cookies)
         return self
 
-    def bytes(self, data : bytes):
+    def bytes(self, data):
         self.body = self.body + data
         return self
 
-    def text(self, data : str):
+    def text(self, data):
         self.body = self.body + data.encode("utf-8")
         return self
 
