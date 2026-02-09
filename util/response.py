@@ -1,5 +1,4 @@
 import json
-from typing import Dict
 
 mime_types = {
     ".json" : "application/javascript",
@@ -47,7 +46,7 @@ class Response:
     def json(self, data):
         self.headers_dict["Content-Type"] = "application/json"
         jsonstr = json.dumps(data)
-        self.body = jsonstr.encode("utf-8")
+        self.body = bytes(jsonstr)
         return self
 
     def to_data(self):
