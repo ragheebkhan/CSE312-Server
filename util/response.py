@@ -19,8 +19,8 @@ class Response:
     def __init__(self):
         self.status_code = 200
         self.status_message = "OK"
-        self.headers_dict : Dict[str,str] = {}
-        self.cookies_dict : Dict[str,str] = {}
+        self.headers_dict = {}
+        self.cookies_dict = {}
         self.body = b""
 
     def set_status(self, code : int, text : str):
@@ -28,11 +28,11 @@ class Response:
         self.status_message = text
         return self
 
-    def headers(self, headers : Dict[str,str]):
+    def headers(self, headers):
         self.headers_dict.update(headers)
         return self
 
-    def cookies(self, cookies : Dict[str,str]):
+    def cookies(self, cookies):
         self.cookies_dict.update(cookies)
         return self
 
