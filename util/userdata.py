@@ -27,6 +27,8 @@ class UserDataInterface:
         return userdata
     
     def search_by_username_prefix(self, prefix):
+        if prefix == "":
+            return []
         results = []
         all_users = self.__user_collection.find({})
 
