@@ -1,6 +1,7 @@
 import socketserver
 from util.request import Request
 from util.router import Router
+import util.auth
 from util.hello_path import hello_path
 import util.file_routes
 import util.chat
@@ -28,6 +29,7 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
         self.router.add_route("GET", "/index", util.file_routes.render_html, True)
         self.router.add_route("GET", "/register", util.file_routes.render_html, True)
         self.router.add_route("GET", "/login", util.file_routes.render_html, True)
+        self.router.add_route("POST", "/login", util.auth.login, True)
         self.router.add_route("GET", "/search-users", util.file_routes.render_html, True)
         self.router.add_route("GET", "/set-thumbnail", util.file_routes.render_html, True)
         self.router.add_route("GET", "/settings", util.file_routes.render_html, True)
@@ -37,7 +39,10 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
         self.router.add_route("GET", "/video-call", util.file_routes.render_html, True)
         self.router.add_route("GET", "/videotube", util.file_routes.render_html, True)
         self.router.add_route("GET", "/view-video", util.file_routes.render_html, True)
-        # TODO: Add your routes here
+        self.router.add_route("POST", "/register", util.auth.register, True)
+        self.router.add_route("GET", "/logout", util.auth.logout, True)
+        self.router.add_route("GET", "/api/users/@me", util.auth.get_user, True)
+        self.router.add_route("POST", "/api/users/settings", util.auth.update_profile, True)
         super().__init__(request, client_address, server)
 
     def handle(self):

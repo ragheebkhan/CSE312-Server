@@ -78,10 +78,21 @@ def send404(handler, message = "File Not Found"):
     res.text(message)
     handler.request.sendall(res.to_data())
 
-def send403(handler):
+def send403(handler, message = "You don't have permission to do that"):
     res = Response()
     res.set_status(403, "Forbidden")
-    res.text("You don't have permission to do that")
+    res.text(message)
+    handler.request.sendall(res.to_data())
+
+def send400(handler, message = "Bad request"):
+    res = Response()
+    res.set_status(400, "Bad Request")
+    res.text(message)
+    handler.request.sendall(res.to_data())
+
+def send200(handler, message = "Successful"):
+    res = Response()
+    res.text(message)
     handler.request.sendall(res.to_data())
 
 def test1():

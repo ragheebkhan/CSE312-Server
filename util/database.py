@@ -18,3 +18,6 @@ db = mongo_client["cse312"]
 
 chat_collection = db["chat"]
 user_collection = db["users"]
+
+chat_collection.delete_many({})
+user_collection.delete_many({})
