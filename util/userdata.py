@@ -26,6 +26,15 @@ class UserDataInterface:
         userdata.session = record["session"]
         return userdata
     
+    def search_by_username_prefix(self, prefix):
+        results = []
+        all_users = self.__user_collection.find({})
+
+        for user in all_users:
+            if user["username"].startswith(prefix):
+                results.append(self.__from_record(user))
+        return results
+    
     def search_by_user_id(self, user_id : str):
         record = self.__user_collection.find_one({"user_id":user_id})
 
@@ -83,7 +92,8 @@ class UserDataInterface:
         return self.__user_collection.delete_one({"username":username})
 
     def update_username(self, user_id, new_username):
-        if self.__user_collection.find_one({"username":new_username}):
+        other = self.__user_collection.find_one({"username":new_username})
+        if other and other["user_id"] != user_id:
             raise Exception(f"Username {new_username} already exists")
         
         return self.__user_collection.update_one({"user_id":user_id}, {"$set":{"username":new_username}})

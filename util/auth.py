@@ -188,4 +188,54 @@ def get_user(request : util.request.Request, handler):
     handler.request.sendall(res.to_data())
 
 def update_profile(request : util.request.Request, handler):
-    pass
+    user_data_interface = util.userdata.UserDataInterface(util.database.user_collection)
+
+    username = ""
+    password = ""
+
+    try:
+        username, password = extract_credentials(request)
+        if not validate_password(password):
+            raise Exception()
+    except:
+        util.response.send400(handler, "Invalid password")
+        return
+    
+    if "auth_token" not in request.cookies:
+        util.response.send400(handler)
+        return
+
+    auth_token = request.cookies["auth_token"]
+    auth_hash = hash(auth_token)
+
+    userdata = user_data_interface.search_by_auth_hash(auth_hash)
+
+    if not userdata:
+        util.response.send400(handler)
+        return
+
+    salt = bcrypt.gensalt()
+    password_hash = bcrypt.hashpw(password.encode(), salt)
+    
+    user_data_interface.update_username(userdata.user_id, username)
+    user_data_interface.update_password_hash(userdata.user_id, password_hash)
+
+    util.response.send200(handler)
+
+def search_users(request : util.request.Request, handler):
+    user_data_interface = util.userdata.UserDataInterface(util.database.user_collection)
+
+    prefix = re.search(r'\?user=([a-zA-Z0-9]*)', request.path)
+    prefix = prefix.group(1)
+
+    userdata_list = user_data_interface.search_by_username_prefix(prefix)
+
+    results = {"users":[]}
+
+    for userdata in userdata_list:
+        user_dict = {"id" : userdata.user_id, "username":userdata.username}
+        results["users"].append(user_dict)
+    
+    res = util.response.Response()
+    res.json(results)
+    handler.request.sendall(res.to_data())
