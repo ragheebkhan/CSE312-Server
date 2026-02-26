@@ -44,6 +44,7 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
         self.router.add_route("GET", "/api/users/@me", util.auth.get_user, True)
         self.router.add_route("POST", "/api/users/settings", util.auth.update_profile, True)
         self.router.add_route("GET", "/api/users/search", util.auth.search_users, False)
+        self.router.add_route("POST", "/api/totp/enable", util.auth.regenerate_2fa, True)
         super().__init__(request, client_address, server)
 
     def handle(self):

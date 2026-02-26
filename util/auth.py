@@ -5,6 +5,8 @@ import util.database
 import bcrypt
 import uuid
 import util.userdata
+import pyotp
+import time
 
 def percent_decode(encoded_string : str):
     encoding_map = {"%21" : "!",
@@ -37,7 +39,10 @@ def extract_credentials(request : util.request.Request):
         username=re.search(r'(?:(?<=^)|(?<=&))username=([a-zA-Z0-9]+)', body).group(1)
         password=re.search(r'(?:(?<=^)|(?<=&))password=([^&]+)',body).group(1)
         password = percent_decode(password)
-        return [username,password]
+
+        totp=re.search(r'(?:(?<=^)|(?<=&))totpCode=([0-9]+)',body)
+
+        return [username,password] if not totp else [username, password, totp.group(1)]
     except:
         return []
 
@@ -98,9 +103,16 @@ def login(request : util.request.Request, handler):
 
     username = ""
     password = ""
+    totp_code = None
 
     try:
-        username, password = extract_credentials(request)
+        user_list = extract_credentials(request)
+        if len(user_list) == 2:
+            username, password = user_list
+
+        elif len(user_list) == 3:
+            username, password, totp_code = user_list
+
         if not validate_password(password):
             raise Exception()
     except:
@@ -116,6 +128,31 @@ def login(request : util.request.Request, handler):
     if not bcrypt.checkpw(password.encode(), userdata.password_hash):
         util.response.send400(handler, "Incorrect Password")
         return
+    
+    secrets_db = util.database.secret_collection
+
+    record = secrets_db.find_one({"user_id" : userdata.user_id})
+
+    if record and not totp_code:
+        res = util.response.Response()
+        res.set_status(401, "Unauthorized")
+        res.text("No TOTP code")
+        handler.request.sendall(res.to_data())
+        return
+    
+    if not record and totp_code:
+        util.response.send400(handler, "No secret found")
+        return
+    
+    if record and totp_code:
+        secret = record["secret"]
+        totp = pyotp.TOTP(secret)
+        if not totp.verify(totp_code):
+            res = util.response.Response()
+            res.set_status(401, "Unauthorized")
+            res.text("Invalid TOTP code")
+            handler.request.sendall(res.to_data())
+            return
     
     auth_token = str(uuid.uuid4())
     auth_hash = hash(auth_token)
@@ -239,3 +276,37 @@ def search_users(request : util.request.Request, handler):
     res = util.response.Response()
     res.json(results)
     handler.request.sendall(res.to_data())
+
+def regenerate_2fa(request : util.request.Request, handler):
+    user_data_interface = util.userdata.UserDataInterface(util.database.user_collection)
+    secrets_db = util.database.secret_collection
+
+    if "auth_token" not in request.cookies:
+        util.response.send400(handler)
+        return
+    
+    auth_token = request.cookies["auth_token"]
+    auth_hash = hash(auth_token)
+
+    user_data = user_data_interface.search_by_auth_hash(auth_hash)
+
+    if not user_data:
+        util.response.send400(handler)
+        return
+    
+    if not user_data.auth_valid:
+        util.response.send403(handler)
+        return
+    
+    secret = pyotp.random_base32()
+
+    if not secrets_db.find_one({"user_id" : user_data.user_id}):
+        secrets_db.insert_one({"user_id" : user_data.user_id, "secret" : secret})
+    else:
+        secrets_db.update_one({"user_id" : user_data.user_id}, {"$set" : {"secret" : secret}})
+
+    res = util.response.Response()
+    res.json({"secret" : secret})
+    handler.request.sendall(res.to_data())
+
+

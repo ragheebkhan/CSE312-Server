@@ -18,3 +18,4 @@ db = mongo_client["cse312"]
 
 chat_collection = db["chat"]
 user_collection = db["users"]
+secret_collection = db["secrets"]
