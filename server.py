@@ -2,6 +2,7 @@ import socketserver
 from util.request import Request
 from util.router import Router
 import util.auth
+import util.github_oauth
 from util.hello_path import hello_path
 import util.file_routes
 import util.chat
@@ -45,6 +46,8 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
         self.router.add_route("POST", "/api/users/settings", util.auth.update_profile, True)
         self.router.add_route("GET", "/api/users/search", util.auth.search_users, False)
         self.router.add_route("POST", "/api/totp/enable", util.auth.regenerate_2fa, True)
+        self.router.add_route("GET", "/authgithub", util.github_oauth.authgithub, True)
+        self.router.add_route("GET", "/authcallback", util.github_oauth.authcallback, False)
         super().__init__(request, client_address, server)
 
     def handle(self):
